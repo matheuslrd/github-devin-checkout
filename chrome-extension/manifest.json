@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Devin Checkout branches",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Adds a secure checkout action to ContatoSeguro GitHub issues.",
   "content_scripts": [
     {

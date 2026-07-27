@@ -14,6 +14,11 @@
 
   let refreshScheduled = false;
   let lastHref = window.location.href;
+  let lastDebugState = "";
+
+  function logDebug(message, details) {
+    console.log(`[Devin Checkout] ${message}`, details);
+  }
 
   function canonicalIssueUrl(value) {
     let parsed;
@@ -286,7 +291,7 @@
 
     button.append(icon, label);
     button.addEventListener("click", function handleCheckoutClick(event) {
-      console.log("[Devin Checkout] checkout solicitado", {
+      logDebug("checkout solicitado", {
         issueUrl,
         protocolUri: button.href,
         isTrusted: event.isTrusted,
@@ -343,17 +348,38 @@
     actions.append(createButton(issueUrl));
 
     placeActions(actions, target, copyLink);
+    logDebug("botão adicionado", {
+      issueUrl,
+      nextToCopyLink: Boolean(copyLink),
+    });
   }
 
   function removeStaleButtons(issueUrls) {
     for (const button of document.querySelectorAll(`[${ISSUE_ATTRIBUTE}]`)) {
-      if (issueUrls.has(button.getAttribute(ISSUE_ATTRIBUTE))) {
+      const issueUrl = button.getAttribute(ISSUE_ATTRIBUTE);
+      if (issueUrls.has(issueUrl)) {
         continue;
       }
 
       const actions = button.closest(`[${ACTIONS_ATTRIBUTE}]`);
       (actions || button).remove();
+      logDebug("botão removido", { issueUrl });
     }
+  }
+
+  function logViewState(issueUrls, surfaceCount) {
+    const issues = [...issueUrls].sort();
+    const state = JSON.stringify([window.location.href, issues]);
+    if (state === lastDebugState) {
+      return;
+    }
+
+    lastDebugState = state;
+    logDebug("estado atualizado", {
+      pageUrl: window.location.href,
+      issues,
+      surfaceCount,
+    });
   }
 
   function refreshButtons() {
@@ -361,6 +387,7 @@
     const views = collectIssueViews();
     const issueUrls = new Set(views.map((view) => view.issueUrl));
 
+    logViewState(issueUrls, views.length);
     removeStaleButtons(issueUrls);
 
     const handledIssueUrls = new Set();
@@ -415,6 +442,11 @@
   }
 
   function start() {
+    logDebug("extensão inicializada", {
+      version: chrome.runtime.getManifest().version,
+      pageUrl: window.location.href,
+    });
+
     const observer = new MutationObserver(scheduleRefresh);
     observer.observe(document.body, {
       childList: true,

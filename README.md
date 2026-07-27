@@ -154,18 +154,26 @@ python3 -m json.tool chrome-extension/manifest.json >/dev/null
 
 O painel precisa conter um link semântico para a issue original.
 
+### Acompanhar o fluxo no Console
+
+Abra o DevTools da página (`F12`) e selecione a aba **Console**. As mensagens
+da extensão usam o prefixo `[Devin Checkout]`:
+
+- `extensão inicializada`: confirma que o content script foi carregado;
+- `estado atualizado`: mostra a página, as issues encontradas e o número de
+  superfícies analisadas;
+- `botão adicionado`: confirma que a ação foi inserida no DOM;
+- `checkout solicitado`: registra o clique e a URI enviada ao sistema;
+- `botão removido`: indica que a issue deixou de estar visível.
+
+No log `checkout solicitado`, um clique normal deve apresentar
+`isTrusted: true` e `defaultPrevented: false`.
+
+Se os quatro primeiros logs aparecerem e o terminal não abrir, a extensão
+concluiu sua parte do fluxo e o diagnóstico deve continuar no registro do
+protocolo.
+
 ### O clique não abre o terminal
-
-Abra o DevTools da página (`F12`), selecione a aba **Console** e clique em
-**Checkout branches**. A extensão registra uma mensagem com este formato:
-
-```text
-[Devin Checkout] checkout solicitado
-```
-
-O objeto exibido ao lado da mensagem contém a URL da issue, a URI enviada ao
-sistema e os indicadores `isTrusted` e `defaultPrevented`. Em um clique normal,
-o esperado é `isTrusted: true` e `defaultPrevented: false`.
 
 Confira o registro do protocolo:
 
