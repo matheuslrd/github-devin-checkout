@@ -286,6 +286,13 @@
 
     button.append(icon, label);
     button.addEventListener("click", function handleCheckoutClick(event) {
+      console.log("[Devin Checkout] checkout solicitado", {
+        issueUrl,
+        protocolUri: button.href,
+        isTrusted: event.isTrusted,
+        defaultPrevented: event.defaultPrevented,
+      });
+
       // Keep GitHub's delegated SPA handlers from intercepting the external
       // protocol. The link's native default action preserves the user gesture
       // required by Chrome to launch a registered protocol handler.

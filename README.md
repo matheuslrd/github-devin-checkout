@@ -156,6 +156,17 @@ O painel precisa conter um link semântico para a issue original.
 
 ### O clique não abre o terminal
 
+Abra o DevTools da página (`F12`), selecione a aba **Console** e clique em
+**Checkout branches**. A extensão registra uma mensagem com este formato:
+
+```text
+[Devin Checkout] checkout solicitado
+```
+
+O objeto exibido ao lado da mensagem contém a URL da issue, a URI enviada ao
+sistema e os indicadores `isTrusted` e `defaultPrevented`. Em um clique normal,
+o esperado é `isTrusted: true` e `defaultPrevented: false`.
+
 Confira o registro do protocolo:
 
 ```bash
