@@ -1,98 +1,103 @@
 # GitHub Devin Checkout
 
-Extensão local para o Google Chrome que adiciona uma ação de checkout às issues
-da organização `ContatoSeguro`. Com um clique, ela abre o Devin CLI no
-`developer-env` e solicita a execução da skill `checkout-issue-branches` para a
-issue atual.
+Extensão para o Google Chrome que adiciona a ação **Checkout branches** às
+issues da organização `ContatoSeguro`. Ao clicar no botão, o Devin CLI é aberto
+no `developer-env` com a skill `checkout-issue-branches` e a URL da issue atual.
 
-O projeto foi pensado para reduzir o trabalho manual de copiar a URL da issue,
-abrir um terminal, navegar até o ambiente de desenvolvimento e montar o prompt
-do Devin.
+## Compatibilidade
 
-## Como funciona
+O projeto atende a um ambiente específico:
 
-```text
-Issue no GitHub
-    ↓ clique em "Checkout branches"
-devin-checkout://run?issue=<URL>
-    ↓ handler registrado no Ubuntu
-launcher/open-checkout.py
-    ↓ validação estrita da URI
-GNOME Terminal em ~/projects/developer-env
-    ↓
-Devin CLI + skill checkout-issue-branches
-```
+| Componente | Requisito |
+| --- | --- |
+| Sistema | Ubuntu com GNOME Terminal |
+| Navegador | Google Chrome |
+| GitHub | Issues da organização `ContatoSeguro` |
+| Devin CLI | Executável em `~/.local/bin/devin` |
+| Ambiente | `developer-env` em `~/projects/developer-env` |
+| Dependências do sistema | Python 3 e `xdg-mime` |
 
-A extensão funciona tanto em páginas comuns de issues quanto em painéis e
-modais do GitHub Projects. Ela acompanha a navegação SPA do GitHub, mantém
-somente uma ação por issue e ignora as próprias mudanças no DOM para evitar
-loops visuais.
-
-## Requisitos
-
-- Ubuntu com GNOME Terminal;
-- Google Chrome;
-- Python 3;
-- `xdg-mime`;
-- Devin CLI instalado e executável em `~/.local/bin/devin`;
-- repositório `developer-env` disponível em `~/projects/developer-env`;
-- acesso às issues da organização `ContatoSeguro`.
+A extensão funciona em páginas comuns de issues e em painéis ou modais do
+GitHub Projects. Como a integração depende do HTML do GitHub, alterações
+relevantes na interface podem exigir ajustes no content script.
 
 Não há dependências npm, bundler ou etapa de build.
 
+## Visão geral
+
+O fluxo é dividido em três partes:
+
+1. A extensão identifica uma issue da `ContatoSeguro` e adiciona o botão ao
+   lado de **Copy link**.
+2. O botão abre uma URI no formato
+   `devin-checkout://run?issue=<URL_DA_ISSUE>`.
+3. O handler do Ubuntu valida a URI e inicia o Devin no diretório
+   `~/projects/developer-env`.
+
+```text
+GitHub issue
+    |
+    | Checkout branches
+    v
+devin-checkout://
+    |
+    | launcher/open-checkout.py
+    v
+GNOME Terminal -> Devin CLI -> checkout-issue-branches
+```
+
+O content script acompanha a navegação SPA do GitHub, evita botões duplicados e
+ignora as próprias alterações no DOM para não criar ciclos de renderização.
+
 ## Instalação
 
-Clone o repositório e execute o instalador:
+### 1. Clonar o projeto
 
 ```bash
-git clone git@github.com:matheuslrd/github-devin-checkout.git
+git clone https://github.com/matheuslrd/github-devin-checkout.git
 cd github-devin-checkout
+```
+
+### 2. Registrar o protocolo no Ubuntu
+
+```bash
 ./install.sh
 ```
 
-O instalador:
+O instalador valida os requisitos, cria
+`~/.local/share/applications/devin-checkout.desktop` e registra o protocolo
+`devin-checkout://` para o usuário atual.
 
-- valida todos os pré-requisitos locais;
-- cria `~/.local/share/applications/devin-checkout.desktop`;
-- registra `devin-checkout://` como protocolo do usuário atual;
-- usa o caminho real do clone, portanto o projeto pode ser clonado em qualquer
-  diretório;
-- não altera arquivos dentro de `developer-env`.
+O caminho real do clone é usado no arquivo `.desktop`, então o projeto pode ser
+clonado em qualquer diretório. Nenhum arquivo do `developer-env` é alterado.
 
-### Carregar a extensão no Chrome
+### 3. Carregar a extensão no Chrome
 
 1. Abra `chrome://extensions`.
 2. Ative **Modo do desenvolvedor**.
 3. Clique em **Carregar sem compactação**.
-4. Selecione a pasta `chrome-extension` dentro deste repositório.
+4. Selecione a pasta `chrome-extension` deste repositório.
 
-> Selecione `chrome-extension`, não a raiz do projeto.
+Selecione `chrome-extension`, não a raiz do projeto.
+
+## Uso
 
 Abra uma issue da organização `ContatoSeguro`. O ícone de branch aparecerá
 próximo à ação **Copy link**, com o tooltip **Checkout branches**.
 
-No primeiro clique, o Chrome solicitará autorização para abrir o aplicativo
+No primeiro clique, o Chrome solicitará autorização para abrir o protocolo
 externo. Confirme **Abrir Devin Checkout** e, se disponível, marque a opção para
 lembrar a escolha.
 
-## Estrutura
+O terminal será aberto em `~/projects/developer-env` com o seguinte prompt:
 
 ```text
-github-devin-checkout/
-├── chrome-extension/
-│   ├── manifest.json       # Manifest V3
-│   ├── content.js          # integração com issues e navegação SPA
-│   └── content.css         # apresentação do botão
-├── launcher/
-│   └── open-checkout.py    # valida a URI e inicia o Devin
-├── install.sh              # registra o protocolo no Ubuntu
-└── README.md
+Use the checkout-issue-branches skill for <URL_DA_ISSUE>
 ```
 
 ## Segurança
 
-O launcher não executa conteúdo arbitrário recebido pelo navegador. Antes de
-abrir o terminal, ele exige:
+O launcher aceita somente URIs que atendam a todos estes critérios:
 
 - protocolo `devin-checkout://`;
 - host interno `run`;
@@ -100,14 +105,14 @@ abrir o terminal, ele exige:
 - URL HTTPS no host `github.com`;
 - organização `ContatoSeguro`;
 - caminho no formato `<repositorio>/issues/<numero>`;
-- ausência de credenciais, query string ou fragmento na URL da issue.
+- nenhuma credencial, query string ou fragmento na URL da issue.
 
-O processo é iniciado com uma lista de argumentos, sem `shell=True`, evitando
-interpretação da URL por um shell.
+O Devin é iniciado com uma lista de argumentos e sem `shell=True`. A URL
+recebida do navegador não é interpretada por um shell.
 
-## Testes manuais
+## Verificação
 
-### Validar o registro do protocolo
+### Conferir o handler
 
 ```bash
 xdg-mime query default x-scheme-handler/devin-checkout
@@ -119,21 +124,17 @@ Resultado esperado:
 devin-checkout.desktop
 ```
 
-### Testar o fluxo sem a extensão
+### Testar sem a extensão
 
 ```bash
 URI='devin-checkout://run?issue=https%3A%2F%2Fgithub.com%2FContatoSeguro%2Fexample-repo%2Fissues%2F123'
 xdg-open "$URI"
 ```
 
-O resultado esperado é um GNOME Terminal em `~/projects/developer-env`
-executando o equivalente a:
+O comando deve abrir o GNOME Terminal em `~/projects/developer-env` e iniciar o
+Devin com a URL de exemplo.
 
-```text
-~/.local/bin/devin -- "Use the checkout-issue-branches skill for https://github.com/ContatoSeguro/example-repo/issues/123"
-```
-
-### Validar sintaxe
+### Validar os arquivos
 
 ```bash
 node --check chrome-extension/content.js
@@ -149,20 +150,22 @@ python3 -m json.tool chrome-extension/manifest.json >/dev/null
 - confirme que a extensão foi carregada a partir de `chrome-extension`;
 - recarregue a extensão em `chrome://extensions` e atualize a página;
 - confirme que a URL pertence à organização `ContatoSeguro`;
-- no GitHub Projects, abra o painel da issue — ele precisa expor um link
-  semântico para a issue.
+- no GitHub Projects, abra o painel da issue.
+
+O painel precisa conter um link semântico para a issue original.
 
 ### O clique não abre o terminal
 
-Confira o handler:
+Confira o registro do protocolo:
 
 ```bash
 xdg-mime query default x-scheme-handler/devin-checkout
 gio mime x-scheme-handler/devin-checkout
 ```
 
-Se necessário, execute `./install.sh` novamente. Confira também se o Chrome
-está aguardando a confirmação para abrir o protocolo externo.
+Se o handler não estiver registrado, execute `./install.sh` novamente. Verifique
+também se o Chrome está aguardando a confirmação para abrir o aplicativo
+externo.
 
 ### O terminal abre, mas o Devin não inicia
 
@@ -175,29 +178,41 @@ Os dois comandos devem terminar sem erro.
 
 ### O launcher rejeita a URL
 
-Use exatamente:
+A URL precisa seguir exatamente este formato:
 
 ```text
 https://github.com/ContatoSeguro/<repositorio>/issues/<numero>
 ```
 
-A URL não pode conter query string, fragmento ou outro host.
+Query strings, fragmentos e outros hosts não são aceitos.
+
+## Estrutura do projeto
+
+```text
+github-devin-checkout/
+├── chrome-extension/
+│   ├── manifest.json
+│   ├── content.js
+│   └── content.css
+├── launcher/
+│   └── open-checkout.py
+├── install.sh
+└── README.md
+```
 
 ## Atualização
-
-Depois de atualizar o clone:
 
 ```bash
 git pull
 ./install.sh
 ```
 
-Em seguida, abra `chrome://extensions`, recarregue a extensão e atualize as
-páginas do GitHub já abertas.
+Depois, recarregue a extensão em `chrome://extensions` e atualize as páginas do
+GitHub que já estavam abertas.
 
 ## Desinstalação
 
-Remova a extensão em `chrome://extensions` e depois execute:
+Remova a extensão em `chrome://extensions` e execute:
 
 ```bash
 rm -f -- "$HOME/.local/share/applications/devin-checkout.desktop"
@@ -209,14 +224,8 @@ if command -v update-desktop-database >/dev/null 2>&1; then
 fi
 ```
 
-Confirme a remoção:
+Para confirmar:
 
 ```bash
 xdg-mime query default x-scheme-handler/devin-checkout
 ```
-
-## Compatibilidade
-
-Este projeto é específico para o fluxo da organização `ContatoSeguro` e para o
-layout de ambiente descrito nos requisitos. Mudanças relevantes no HTML do
-GitHub podem exigir ajustes no content script.
