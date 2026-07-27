@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "Devin Checkout branches",
+  "version": "1.0.0",
+  "description": "Adds a secure checkout action to ContatoSeguro GitHub issues.",
+  "content_scripts": [
+    {
+      "matches": ["https://github.com/*"],
+      "css": ["content.css"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

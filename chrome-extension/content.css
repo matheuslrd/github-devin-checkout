@@ -1,0 +1,76 @@
+.devin-checkout-actions {
+  display: inline-flex;
+  align-items: center;
+  margin-inline-start: 4px;
+  vertical-align: middle;
+}
+
+.devin-checkout-button {
+  appearance: none;
+  border: 1px solid #0f766e;
+  border-radius: 6px;
+  box-sizing: border-box;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 6px;
+  background: #0f766e;
+  color: #ffffff;
+  font: inherit;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.devin-checkout-icon {
+  display: block;
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.devin-checkout-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.devin-checkout-button:hover {
+  background: #115e59;
+  border-color: #115e59;
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.devin-checkout-button:focus-visible {
+  outline: 2px solid #5eead4;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px rgba(94, 234, 212, 0.25);
+}
+
+.devin-checkout-button:active {
+  transform: translateY(1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .devin-checkout-button {
+    transition: none;
+  }
+
+  .devin-checkout-button:active {
+    transform: none;
+  }
+}
