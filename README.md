@@ -1,8 +1,17 @@
-# GitHub Devin Checkout
+# Contato Seguro
 
-Extensão para o Google Chrome que adiciona a ação **Checkout branches** às
-issues da organização `ContatoSeguro`. Ao clicar no botão, o Devin CLI é aberto
-no `developer-env` com a skill `checkout-issue-branches` e a URL da issue atual.
+Extensão para o Google Chrome com botões customizados em contextos diferentes.
+O primeiro botão, **Checkout branches**, abre o Devin CLI no `developer-env`
+com a skill `checkout-issue-branches` e a URL da issue atual da organização
+`ContatoSeguro`.
+
+Novos botões entram como um módulo em `chrome-extension/src/buttons/` e são
+registrados no manifesto, sem alterar o runtime.
+
+Nas PRs com branch `issue/NUMBER`, o topo ganha três botões: **Começar
+revisão**, **Devolver para TO DO** e **Avançar para validação**. Cada um abre
+o Devin, como o checkout, e o Devin move o card no board de time (ignora
+`Contato Seguro - Produtos`). Sem token na extensão.
 
 ## Compatibilidade
 
@@ -17,19 +26,25 @@ O projeto atende a um ambiente específico:
 | Ambiente | `developer-env` em `~/projects/developer-env` |
 | Dependências do sistema | Python 3 e `xdg-mime` |
 
-A extensão funciona em páginas comuns de issues e em painéis ou modais do
-GitHub Projects. Como a integração depende do HTML do GitHub, alterações
-relevantes na interface podem exigir ajustes no content script.
+A ação de checkout funciona em páginas comuns de issues e em painéis ou
+modais do GitHub Projects. Em painéis de sub-issues, a ação usa o link da
+issue exibida, sem confundi-lo com o link da issue mãe. Como a integração
+depende do HTML do GitHub, alterações relevantes na interface podem exigir
+ajustes no botão correspondente.
 
 Não há dependências npm, bundler ou etapa de build.
 
 ## Visão geral
 
-O fluxo é dividido em três partes:
+O content script carrega um registro compartilhado, os botões e um runtime.
+Cada botão declara onde aparece, como é criado e onde é inserido. O runtime
+observa a navegação SPA, evita duplicatas e remove controles que saíram de
+contexto.
 
-1. A extensão identifica uma issue da `ContatoSeguro` e adiciona o botão ao
-   lado de **Copy link**.
-2. O botão abre uma URI no formato
+O fluxo do checkout continua dividido em três partes:
+
+1. O botão identifica uma issue da `ContatoSeguro` e entra ao lado de **Copy link**.
+2. O clique abre uma URI no formato
    `devin-checkout://run?issue=<URL_DA_ISSUE>`.
 3. O handler do Ubuntu valida a URI e inicia o Devin no diretório
    `~/projects/developer-env`.
@@ -45,9 +60,6 @@ devin-checkout://
     v
 GNOME Terminal -> Devin CLI -> checkout-issue-branches
 ```
-
-O content script acompanha a navegação SPA do GitHub, evita botões duplicados e
-ignora as próprias alterações no DOM para não criar ciclos de renderização.
 
 ## Instalação
 
@@ -137,8 +149,14 @@ Devin com a URL de exemplo.
 ### Validar os arquivos
 
 ```bash
-node --check chrome-extension/content.js
+node --check chrome-extension/src/registry.js
+node --check chrome-extension/src/config.js
+node --check chrome-extension/src/shared.js
+node --check chrome-extension/src/runtime.js
+node --check chrome-extension/src/buttons/checkout-branches.js
+node --check chrome-extension/src/buttons/review-pr-card.js
 python3 -m py_compile launcher/open-checkout.py
+python3 -m py_compile launcher/open-contato-seguro.py
 bash -n install.sh
 python3 -m json.tool chrome-extension/manifest.json >/dev/null
 ```
@@ -157,14 +175,13 @@ O painel precisa conter um link semântico para a issue original.
 ### Acompanhar o fluxo no Console
 
 Abra o DevTools da página (`F12`) e selecione a aba **Console**. As mensagens
-da extensão usam o prefixo `[Devin Checkout]`:
+da extensão usam o prefixo `[Contato Seguro]`:
 
 - `extensão inicializada`: confirma que o content script foi carregado;
-- `estado atualizado`: mostra a página, as issues encontradas e o número de
-  superfícies analisadas;
+- `estado atualizado`: mostra a página e as chaves ativas de cada botão;
 - `botão adicionado`: confirma que a ação foi inserida no DOM;
-- `checkout solicitado`: registra o clique e a URI enviada ao sistema;
-- `botão removido`: indica que a issue deixou de estar visível.
+- `checkout solicitado` / `ação de review solicitada`: registra o clique e a URI;
+- `botão removido`: indica que o contexto deixou de estar visível.
 
 No log `checkout solicitado`, um clique normal deve apresentar
 `isTrusted: true` e `defaultPrevented: false`.
@@ -211,13 +228,25 @@ Query strings, fragmentos e outros hosts não são aceitos.
 github-devin-checkout/
 ├── chrome-extension/
 │   ├── manifest.json
-│   ├── content.js
-│   └── content.css
+│   ├── content.css
+│   └── src/
+│       ├── registry.js
+│       ├── config.js
+│       ├── shared.js
+│       ├── runtime.js
+│       └── buttons/
+│           ├── checkout-branches.js
+│           └── review-pr-card.js
 ├── launcher/
-│   └── open-checkout.py
+│   ├── open-checkout.py
+│   └── open-contato-seguro.py
 ├── install.sh
 └── README.md
 ```
+
+Um botão novo é um arquivo em `src/buttons/` que chama
+`ContatoSeguro.register({ id, collect, create, place })`. Depois disso, o
+arquivo entra na lista `js` do `manifest.json`.
 
 ## Atualização
 
@@ -235,8 +264,10 @@ Remova a extensão em `chrome://extensions` e execute:
 
 ```bash
 rm -f -- "$HOME/.local/share/applications/devin-checkout.desktop"
+rm -f -- "$HOME/.local/share/applications/contato-seguro.desktop"
 if [ -f "$HOME/.config/mimeapps.list" ]; then
   sed -i '/^x-scheme-handler\/devin-checkout=/d' "$HOME/.config/mimeapps.list"
+  sed -i '/^x-scheme-handler\/contato-seguro=/d' "$HOME/.config/mimeapps.list"
 fi
 if command -v update-desktop-database >/dev/null 2>&1; then
   update-desktop-database "$HOME/.local/share/applications" >/dev/null 2>&1 || true
@@ -247,4 +278,5 @@ Para confirmar:
 
 ```bash
 xdg-mime query default x-scheme-handler/devin-checkout
+xdg-mime query default x-scheme-handler/contato-seguro
 ```

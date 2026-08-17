@@ -1,13 +1,20 @@
 {
   "manifest_version": 3,
-  "name": "Devin Checkout branches",
-  "version": "1.0.2",
-  "description": "Adds a secure checkout action to ContatoSeguro GitHub issues.",
+  "name": "Contato Seguro",
+  "version": "2.1.0",
+  "description": "Botões customizados da Contato Seguro no GitHub e em outros contextos.",
   "content_scripts": [
     {
       "matches": ["https://github.com/*"],
       "css": ["content.css"],
-      "js": ["content.js"],
+      "js": [
+        "src/registry.js",
+        "src/config.js",
+        "src/shared.js",
+        "src/buttons/checkout-branches.js",
+        "src/buttons/review-pr-card.js",
+        "src/runtime.js"
+      ],
       "run_at": "document_idle"
     }
   ]
