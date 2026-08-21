@@ -178,7 +178,7 @@ def main(arguments: list[str]) -> int:
         "--",
         str(devin),
         "--model",
-        "swe-1.7",
+        "deepseek-v4-flash-high",
         "--permission-mode",
         "smart",
         "--",

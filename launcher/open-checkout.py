@@ -126,6 +126,8 @@ def main(arguments: list[str]) -> int:
         f"--working-directory={working_directory}",
         "--",
         str(devin),
+        "--model",
+        "deepseek-v4-flash-high",
         "--",
         prompt,
     ]
