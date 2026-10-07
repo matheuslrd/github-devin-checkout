@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Launch Devin's checkout-issue-branches workflow for one GitHub issue."""
+"""Open the mass-checkout runner in GNOME Terminal for one GitHub issue."""
 
 from __future__ import annotations
 
-import os
 import re
 import shutil
 import subprocess
@@ -12,6 +11,7 @@ from pathlib import Path
 from urllib.parse import unquote_to_bytes, urlsplit
 
 
+RUNNER = Path(__file__).resolve().with_name("run_checkout.py")
 CUSTOM_SCHEME = "devin-checkout"
 CUSTOM_HOST = "run"
 GITHUB_HOST = "github.com"
@@ -111,25 +111,18 @@ def main(arguments: list[str]) -> int:
     if not terminal:
         return error("gnome-terminal não foi encontrado no PATH")
 
-    home = Path.home()
-    devin = home / ".local" / "bin" / "devin"
-    working_directory = home / "projects" / "developer-env"
-
-    if not devin.is_file() or not os.access(devin, os.X_OK):
-        return error(f"o Devin CLI executável não foi encontrado em {devin}")
+    working_directory = Path.home() / "projects" / "developer-env"
     if not working_directory.is_dir():
         return error(f"o diretório de trabalho não foi encontrado em {working_directory}")
 
-    prompt = f"Use the checkout-issue-branches skill for {issue_url}"
     command = [
         terminal,
         f"--working-directory={working_directory}",
         "--",
-        str(devin),
-        "--model",
-        "deepseek-v4-flash-high",
-        "--",
-        prompt,
+        sys.executable,
+        str(RUNNER),
+        "--wait",
+        issue_url,
     ]
 
     try:

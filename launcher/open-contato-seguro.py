@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Launch Devin to move a GitHub issue card on the team board."""
+"""Open the board card runner in GNOME Terminal for one GitHub issue."""
 
 from __future__ import annotations
 
-import os
 import re
 import shutil
 import subprocess
@@ -11,22 +10,18 @@ import sys
 from pathlib import Path
 from urllib.parse import unquote_to_bytes, urlsplit
 
+from move_card import ACTIONS
 
+
+RUNNER = Path(__file__).resolve().with_name("move_card.py")
 CUSTOM_SCHEME = "contato-seguro"
 CUSTOM_HOST = "run"
 GITHUB_HOST = "github.com"
 ORGANIZATION = "ContatoSeguro"
-REVIEWER_LOGIN = "matheuslrd"
-IGNORED_BOARD = "Contato Seguro - Produtos"
 ISSUE_PATH = re.compile(
     rf"^/{re.escape(ORGANIZATION)}/([A-Za-z0-9._-]+)/issues/([1-9][0-9]*)$"
 )
 INVALID_PERCENT_ESCAPE = re.compile(r"%(?![0-9A-Fa-f]{2})")
-ALLOWED_ACTIONS = {
-    "start-review",
-    "return-todo",
-    "advance-validation",
-}
 
 
 class ValidationError(ValueError):
@@ -101,46 +96,12 @@ def parse_custom_uri(uri: str) -> tuple[str, str]:
         raise ValidationError("a URI deve conter somente os parâmetros action e issue")
 
     action = decode_query_component(values["action"])
-    if action not in ALLOWED_ACTIONS:
+    if action not in ACTIONS:
         raise ValidationError("a ação não é permitida")
     if not values["issue"]:
         raise ValidationError("o parâmetro issue não pode estar vazio")
 
     return action, validate_issue_url(decode_query_component(values["issue"]))
-
-
-def prompt_for(action: str, issue_url: str) -> str:
-    common = (
-        "Execute this action immediately with the authenticated gh CLI. "
-        "Do not invoke or search for skills. Do not search or inspect the filesystem. "
-        "Do not ask for confirmation. "
-        f"Update the GitHub Project card for {issue_url}. "
-        f'Ignore the board named "{IGNORED_BOARD}" and use the other project '
-        "containing the issue. Change only what this action asks. "
-        "Report the resulting project and Status when done."
-    )
-
-    if action == "start-review":
-        return (
-            f"{common} Action: start review. "
-            f"Add assignee {REVIEWER_LOGIN} to the issue. "
-            'Set Status to "CODE REVIEW IN PROGRESS".'
-        )
-    if action == "return-todo":
-        return (
-            f'{common} Action: return the card. Read the issue field "Responsável" '
-            f'and resolve the GitHub login of the person it names; do not guess. '
-            f'Remove only assignee {REVIEWER_LOGIN} from the issue and assign the '
-            'issue to that resolved login. Do not change any other assignees. '
-            'Set Status to "TO DO".'
-        )
-    return (
-        f'{common} Action: advance after review. Read the issue field "Responsável" '
-        f'and resolve the GitHub login of the person it names; do not guess. '
-        f'Remove only assignee {REVIEWER_LOGIN} from the issue and assign the '
-        'issue to that resolved login. Do not change any other assignees. '
-        'Set Status to "AWAITING DEV VALIDATION".'
-    )
 
 
 def error(message: str) -> int:
@@ -163,30 +124,10 @@ def main(arguments: list[str]) -> int:
     if not terminal:
         return error("gnome-terminal não foi encontrado no PATH")
 
-    home = Path.home()
-    devin = home / ".local" / "bin" / "devin"
-    working_directory = home / "projects" / "developer-env"
-
-    if not devin.is_file() or not os.access(devin, os.X_OK):
-        return error(f"o Devin CLI executável não foi encontrado em {devin}")
-    if not working_directory.is_dir():
-        return error(f"o diretório de trabalho não foi encontrado em {working_directory}")
-
-    command = [
-        terminal,
-        f"--working-directory={working_directory}",
-        "--",
-        str(devin),
-        "--model",
-        "deepseek-v4-flash-high",
-        "--permission-mode",
-        "smart",
-        "--",
-        prompt_for(action, issue_url),
-    ]
+    command = [terminal, "--", sys.executable, str(RUNNER), "--wait", action, issue_url]
 
     try:
-        subprocess.Popen(command, cwd=working_directory)
+        subprocess.Popen(command)
     except OSError as launch_error:
         return error(f"não foi possível abrir o GNOME Terminal: {launch_error}")
 

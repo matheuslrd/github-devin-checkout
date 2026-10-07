@@ -17,13 +17,20 @@ ACTION_DESKTOP="$APPLICATIONS_DIR/contato-seguro.desktop"
 command -v gnome-terminal >/dev/null 2>&1 \
   || fail 'gnome-terminal não foi encontrado no PATH.'
 
-DEVIN_PATH="$HOME/.local/bin/devin"
-[[ -x "$DEVIN_PATH" ]] \
-  || fail "o Devin CLI executável não foi encontrado em $DEVIN_PATH."
+command -v gh >/dev/null 2>&1 \
+  || fail 'o gh CLI não foi encontrado no PATH.'
+gh auth status >/dev/null 2>&1 \
+  || fail 'o gh CLI não está autenticado. Execute: gh auth login --scopes project'
 
 WORKING_DIRECTORY="$HOME/projects/developer-env"
 [[ -d "$WORKING_DIRECTORY" ]] \
   || fail "o diretório de trabalho não foi encontrado em $WORKING_DIRECTORY."
+
+MASS_CHECKOUT_DIR="$WORKING_DIRECTORY/scripts/mass-checkout"
+for stage in list-sub-issues.sh check-local-status.sh checkout.sh; do
+  [[ -x "$MASS_CHECKOUT_DIR/$stage" ]] \
+    || fail "o script executável não foi encontrado em $MASS_CHECKOUT_DIR/$stage."
+done
 
 [[ -f "$CHECKOUT_LAUNCHER" ]] \
   || fail "o launcher não foi encontrado em $CHECKOUT_LAUNCHER."
@@ -81,15 +88,15 @@ register_handler() {
 register_handler \
   "$CHECKOUT_DESKTOP" \
   "$CHECKOUT_LAUNCHER" \
-  'Devin Checkout' \
-  'Run Devin checkout workflow for a GitHub issue' \
+  'Contato Seguro Checkout' \
+  'Check out the issue branches of a GitHub issue' \
   'devin-checkout'
 
 register_handler \
   "$ACTION_DESKTOP" \
   "$ACTION_LAUNCHER" \
   'Contato Seguro' \
-  'Run Devin to move a GitHub issue card' \
+  'Move a GitHub issue card on the team board' \
   'contato-seguro'
 
 if command -v update-desktop-database >/dev/null 2>&1; then
