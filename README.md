@@ -106,12 +106,12 @@ ou estiver em mais de um, nada é alterado.
 
 | Botão | Status | Assignees |
 | --- | --- | --- |
-| Começar revisão | `CODE REVIEW IN PROGRESS` | adiciona você |
-| Devolver para TO DO | `TO DO` | remove só você e adiciona o login do `Responsável` |
-| Avançar para validação | `AWAITING DEV VALIDATION` | remove só você e adiciona o login do `Responsável` |
+| Começar revisão | `CODE REVIEW IN PROGRESS` | deixa só você |
+| Devolver para TO DO | `TO DO` | deixa só o login do `Responsável` |
+| Avançar para validação | `AWAITING DEV VALIDATION` | deixa só o login do `Responsável` |
 
-"Você" é a conta autenticada no `gh` (`gh auth status`). Os outros assignees
-não mudam.
+"Você" é a conta autenticada no `gh` (`gh auth status`). Todos os outros
+assignees são removidos.
 
 O campo `Responsável` é uma seleção única com nomes, não com usuários do
 GitHub. O nome é convertido em login pela tabela `RESPONSIBLE_LOGINS`, no

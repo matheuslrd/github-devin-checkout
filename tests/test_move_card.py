@@ -41,19 +41,28 @@ def issue(items, assignees=()):
 
 
 class StartReviewTest(unittest.TestCase):
-    def test_assigns_viewer_and_targets_review_column(self):
+    def test_leaves_only_viewer_and_targets_review_column(self):
         plan = build_plan(issue([board_item("Vox")], ["gabizaor"]), VIEWER, ACTIONS["start-review"])
 
         self.assertEqual(plan.add, "matheuslrd")
-        self.assertIsNone(plan.remove)
+        self.assertEqual(plan.remove, (User("U_gabizaor", "gabizaor"),))
         self.assertEqual(plan.status_option_id, "opt-review")
-        self.assertEqual(plan.expected_assignees(), {"gabizaor", "matheuslrd"})
+        self.assertEqual(plan.expected_assignees(), {"matheuslrd"})
 
-    def test_keeps_assignees_when_viewer_is_already_assigned(self):
+    def test_removes_others_when_viewer_is_already_assigned(self):
+        plan = build_plan(
+            issue([board_item("Vox")], ["gabizaor", "matheuslrd"]), VIEWER, ACTIONS["start-review"]
+        )
+
+        self.assertIsNone(plan.add)
+        self.assertEqual(plan.remove, (User("U_gabizaor", "gabizaor"),))
+        self.assertEqual(plan.expected_assignees(), {"matheuslrd"})
+
+    def test_skips_changes_when_viewer_is_the_only_assignee(self):
         plan = build_plan(issue([board_item("Vox")], ["matheuslrd"]), VIEWER, ACTIONS["start-review"])
 
         self.assertIsNone(plan.add)
-        self.assertIsNone(plan.remove)
+        self.assertEqual(plan.remove, ())
 
     def test_does_not_require_responsible_field(self):
         item = board_item("Galáticos", has_responsible_field=False)
@@ -64,33 +73,43 @@ class StartReviewTest(unittest.TestCase):
 
 
 class HandBackTest(unittest.TestCase):
-    def test_swaps_only_the_viewer_for_the_mapped_responsible(self):
+    def test_leaves_only_the_mapped_responsible(self):
         item = board_item("Vox", responsible="João Cirne")
 
         plan = build_plan(
             issue([item], ["matheuslrd", "pedrosobucki"]), VIEWER, ACTIONS["advance-validation"]
         )
 
-        self.assertEqual(plan.remove, User("U_matheuslrd", "matheuslrd"))
+        self.assertEqual(
+            plan.remove,
+            (User("U_matheuslrd", "matheuslrd"), User("U_pedrosobucki", "pedrosobucki")),
+        )
         self.assertEqual(plan.add, "JoaoMoraess")
         self.assertEqual(plan.status_option_id, "opt-validation")
-        self.assertEqual(plan.expected_assignees(), {"JoaoMoraess", "pedrosobucki"})
+        self.assertEqual(plan.expected_assignees(), {"JoaoMoraess"})
 
-    def test_skips_add_when_responsible_is_already_assigned(self):
+    def test_removes_others_when_responsible_is_already_assigned(self):
         item = board_item("Vox", responsible="Gabrielly Reis")
 
-        plan = build_plan(issue([item], ["gabizaor"]), VIEWER, ACTIONS["return-todo"])
+        plan = build_plan(
+            issue([item], ["gabizaor", "matheuslrd", "pedrosobucki"]), VIEWER,
+            ACTIONS["return-todo"],
+        )
 
-        self.assertIsNone(plan.remove)
+        self.assertEqual(
+            plan.remove,
+            (User("U_matheuslrd", "matheuslrd"), User("U_pedrosobucki", "pedrosobucki")),
+        )
         self.assertIsNone(plan.add)
         self.assertEqual(plan.status_option_id, "opt-todo")
+        self.assertEqual(plan.expected_assignees(), {"gabizaor"})
 
     def test_keeps_viewer_when_viewer_is_the_responsible(self):
         item = board_item("Vox", responsible="Matheus Laurindo")
 
         plan = build_plan(issue([item], ["matheuslrd"]), VIEWER, ACTIONS["return-todo"])
 
-        self.assertIsNone(plan.remove)
+        self.assertEqual(plan.remove, ())
         self.assertIsNone(plan.add)
 
     def test_rejects_board_without_responsible_field(self):

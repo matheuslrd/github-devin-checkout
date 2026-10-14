@@ -91,9 +91,9 @@ mutation($issue: ID!, $user: ID!) {
 }
 """
 
-REMOVE_ASSIGNEE_MUTATION = """
-mutation($issue: ID!, $user: ID!) {
-  removeAssigneesFromAssignable(input: { assignableId: $issue, assigneeIds: [$user] }) {
+REMOVE_ASSIGNEES_MUTATION = """
+mutation($issue: ID!, $users: [ID!]!) {
+  removeAssigneesFromAssignable(input: { assignableId: $issue, assigneeIds: $users }) {
     clientMutationId
   }
 }
@@ -135,13 +135,11 @@ class Plan:
     target_status: str
     responsible: str | None
     assignees: tuple[str, ...]
-    remove: User | None
+    remove: tuple[User, ...]
     add: str | None
 
     def expected_assignees(self) -> set[str]:
-        expected = set(self.assignees)
-        if self.remove:
-            expected.discard(self.remove.login)
+        expected = set(self.assignees) - {user.login for user in self.remove}
         if self.add:
             expected.add(self.add)
         return expected
@@ -250,14 +248,11 @@ def build_plan(issue: dict, viewer: User, action: Action) -> Plan:
     }
 
     responsible = None
-    remove = None
     assignee = viewer.login
     if action.hand_back:
         single_select_field(project, RESPONSIBLE_FIELD)
         responsible = values.get(RESPONSIBLE_FIELD)
         assignee = responsible_login(project, responsible)
-        if assignee != viewer.login:
-            remove = assignees.get(viewer.login)
 
     return Plan(
         issue_id=issue["id"],
@@ -270,7 +265,7 @@ def build_plan(issue: dict, viewer: User, action: Action) -> Plan:
         target_status=action.status,
         responsible=responsible,
         assignees=tuple(sorted(assignees)),
-        remove=remove,
+        remove=tuple(user for login, user in sorted(assignees.items()) if login != assignee),
         add=None if assignee in assignees else assignee,
     )
 
@@ -281,7 +276,7 @@ def print_plan(plan: Plan) -> None:
     if plan.responsible:
         print(f"Responsável: {plan.responsible} (@{RESPONSIBLE_LOGINS[plan.responsible]})")
     print(f"Assignees:   {format_logins(plan.assignees)}")
-    print(f"Remover:     {format_logins([plan.remove.login] if plan.remove else [])}")
+    print(f"Remover:     {format_logins(user.login for user in plan.remove)}")
     print(f"Atribuir:    {format_logins([plan.add] if plan.add else [])}")
 
 
@@ -292,7 +287,10 @@ def format_logins(logins: Iterable[str]) -> str:
 def apply(plan: Plan) -> None:
     add_id = graphql(USER_QUERY, {"login": plan.add})["user"]["id"] if plan.add else None
     if plan.remove:
-        graphql(REMOVE_ASSIGNEE_MUTATION, {"issue": plan.issue_id, "user": plan.remove.id})
+        graphql(
+            REMOVE_ASSIGNEES_MUTATION,
+            {"issue": plan.issue_id, "users": [user.id for user in plan.remove]},
+        )
     if add_id:
         graphql(ADD_ASSIGNEE_MUTATION, {"issue": plan.issue_id, "user": add_id})
     if plan.current_status != plan.target_status:
